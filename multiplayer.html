@@ -16,9 +16,10 @@
   <!-- Socket.IO client (load dari backend server) -->
   <script>
     // Socket.IO URL - ganti dengan URL backend kamu
-    window.SOCKET_SERVER_URL = window.location.hostname === 'localhost'
-      ? 'coba-pabp-production.up.railway.app'
-      : 'coba-pabp-production.up.railway.app'; // ← ganti dengan URL deploy kamu
+    window.SOCKET_SERVER_URL =
+  window.location.hostname === 'localhost'
+      ? 'https://coba-pabp-production.up.railway.app/'
+      : 'https://coba-pabp-production.up.railway.app/'; // ← ganti dengan URL deploy kamu
   </script>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="multiplayer.css">
@@ -227,6 +228,7 @@
   <script src="supabase.js"></script>
   <script src="auth.js"></script>
   <!-- Socket.IO dimuat secara dinamis -->
+   <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <script src="multiplayer.js"></script>
 
   <script>
