@@ -39,8 +39,15 @@
   <div class="history-layout">
 
     <div class="history-header">
-      <h2>📋 Riwayat Spin</h2>
-      <p>Semua keputusan yang pernah kamu buat tersimpan di sini.</p>
+      <div class="history-header-top">
+        <div>
+          <h2>📋 Riwayat Spin</h2>
+          <p>Semua keputusan yang pernah kamu buat tersimpan di sini.</p>
+        </div>
+        <button class="btn-delete-all" onclick="confirmDeleteAll()" title="Hapus semua riwayat">
+          🗑️ Hapus Semua Riwayat
+        </button>
+      </div>
     </div>
 
     <!-- Statistik ringkas -->
@@ -99,6 +106,32 @@
       <div class="detail-options-label">Semua pilihan:</div>
       <div class="detail-options-grid" id="detailOptions"></div>
       <button class="btn-close-result" onclick="closeDetail()">Tutup</button>
+    </div>
+  </div>
+
+  <!-- ── Modal Konfirmasi Hapus Semua ──────────────────────── -->
+  <div class="modal-overlay" id="deleteAllModal">
+    <div class="modal modal-confirm">
+      <div class="modal-confirm-icon">🗑️</div>
+      <h3>Hapus Semua Riwayat?</h3>
+      <p class="modal-confirm-desc">Tindakan ini akan menghapus <strong>seluruh</strong> riwayat spin kamu secara permanen dan tidak dapat dibatalkan.</p>
+      <div class="modal-confirm-actions">
+        <button class="btn-cancel-confirm" onclick="closeDeleteAllModal()">Batal</button>
+        <button class="btn-danger-confirm" id="btnConfirmDeleteAll" onclick="deleteAllHistory()">Ya, Hapus Semua</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Modal Konfirmasi Hapus 1 Item ──────────────────────── -->
+  <div class="modal-overlay" id="deleteItemModal">
+    <div class="modal modal-confirm">
+      <div class="modal-confirm-icon">⚠️</div>
+      <h3>Hapus Riwayat Ini?</h3>
+      <p class="modal-confirm-desc">Riwayat ini akan dihapus secara permanen dan tidak dapat dikembalikan.</p>
+      <div class="modal-confirm-actions">
+        <button class="btn-cancel-confirm" onclick="closeDeleteItemModal()">Batal</button>
+        <button class="btn-danger-confirm" id="btnConfirmDeleteItem" onclick="deleteHistoryItem()">Ya, Hapus</button>
+      </div>
     </div>
   </div>
 
