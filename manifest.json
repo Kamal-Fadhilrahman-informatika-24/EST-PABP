@@ -1,40 +1,56 @@
 {
   "name": "SpinDecide – Decision Maker",
   "short_name": "SpinDecide",
-  "description": "Putar roda, dapatkan keputusan interaktif!",
+  "description": "Putar roda, dapatkan keputusan interaktif! Game seru bareng teman.",
   "start_url": "/dashboard.html",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#0f0f1a",
-  "theme_color": "#0f0f1a",
+  "theme_color": "#6c63ff",
   "orientation": "any",
   "lang": "id",
+  "categories": ["games", "entertainment"],
   "icons": [
+    { "src": "icons/icon-72.png",  "sizes": "72x72",   "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-96.png",  "sizes": "96x96",   "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-128.png", "sizes": "128x128", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-144.png", "sizes": "144x144", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-152.png", "sizes": "152x152", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-384.png", "sizes": "384x384", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
     {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "name": "Spin Roda", "short_name": "Spin",
+      "description": "Langsung ke halaman spin wheel",
+      "url": "/dashboard.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     },
     {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
+      "name": "Truth or Dare", "short_name": "Truth/Dare",
+      "description": "Permainan truth or dare",
+      "url": "/truth-dare.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Double Spin", "short_name": "Double",
+      "description": "Putar dua roda sekaligus",
+      "url": "/double-spin.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
     }
   ],
   "screenshots": [
     {
-      "src": "icons/screenshot-wide.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide",
+      "src": "icons/screenshot-wide.png", "sizes": "1280x720",
+      "type": "image/png", "form_factor": "wide",
       "label": "Dashboard SpinDecide di desktop"
     },
     {
-      "src": "icons/screenshot-mobile.png",
-      "sizes": "390x844",
-      "type": "image/png",
-      "form_factor": "narrow",
+      "src": "icons/screenshot-mobile.png", "sizes": "390x844",
+      "type": "image/png", "form_factor": "narrow",
       "label": "SpinDecide di mobile"
     }
   ]

@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline – SpinDecide</title>
+  <meta name="theme-color" content="#6c63ff">
+  <link rel="manifest" href="manifest.json">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --bg-main:      #0f0f1a;
+      --bg-card:      #1a1a2e;
+      --accent:       #6c63ff;
+      --accent-warm:  #ff6b6b;
+      --text-primary: #e8e8f0;
+      --text-muted:   #888899;
+      --border:       rgba(255,255,255,0.08);
+    }
+
+    body {
+      background: var(--bg-main);
+      color: var(--text-primary);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+    }
+
+    /* Animated background blobs */
+    .bg-blobs {
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      overflow: hidden;
+    }
+    .blob {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.12;
+      animation: blobFloat 8s ease-in-out infinite;
+    }
+    .blob-1 { width: 400px; height: 400px; background: var(--accent); top: -100px; left: -100px; animation-delay: 0s; }
+    .blob-2 { width: 300px; height: 300px; background: #ff6b6b; bottom: -80px; right: -80px; animation-delay: -3s; }
+    .blob-3 { width: 250px; height: 250px; background: #ffd93d; top: 50%; left: 50%; transform: translate(-50%,-50%); animation-delay: -6s; }
+
+    @keyframes blobFloat {
+      0%, 100% { transform: translate(0, 0) scale(1); }
+      33%       { transform: translate(20px, -20px) scale(1.05); }
+      66%       { transform: translate(-10px, 10px) scale(0.97); }
+    }
+
+    .container {
+      position: relative; z-index: 1;
+      background: rgba(26,26,46,0.9);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 48px 40px;
+      max-width: 480px; width: 100%;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      animation: slideUp 0.5s ease;
+    }
+
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(30px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .icon-wifi {
+      font-size: 72px;
+      margin-bottom: 24px;
+      display: block;
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(0.9); opacity: 0.7; }
+    }
+
+    h1 {
+      font-size: 1.8rem; font-weight: 800;
+      margin-bottom: 12px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    p {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 32px;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--accent-warm);
+      margin-right: 6px;
+      animation: blink 1.5s step-end infinite;
+      vertical-align: middle;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+
+    .available-features {
+      background: rgba(108,99,255,0.08);
+      border: 1px solid rgba(108,99,255,0.2);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+    .available-features h3 {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+    .feature-item {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.85rem; color: var(--text-muted);
+      padding: 4px 0;
+    }
+    .feature-item.available { color: #6bcb77; }
+    .feature-item.unavailable { color: var(--accent-warm); }
+
+    .buttons { display: flex; flex-direction: column; gap: 12px; }
+
+    .btn {
+      padding: 14px 28px;
+      border-radius: 50px;
+      border: none;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.25s;
+      text-decoration: none;
+      display: inline-block;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), #9b59b6);
+      color: white;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(108,99,255,0.4); }
+    .btn-secondary {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+    }
+    .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+
+    .reconnect-status {
+      margin-top: 20px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    #reconnectTimer {
+      color: var(--accent);
+      font-weight: 600;
+    }
+
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: #6bcb77; color: #0f0f1a;
+      padding: 12px 24px; border-radius: 50px;
+      font-weight: 700; font-size: 0.9rem;
+      opacity: 0; transition: opacity 0.3s;
+      pointer-events: none; z-index: 999;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="container">
+    <span class="icon-wifi">📡</span>
+
+    <h1>Tidak Ada Koneksi</h1>
+    <p>
+      <span class="status-dot"></span>
+      Kamu sedang offline. Beberapa fitur SpinDecide tetap bisa digunakan tanpa internet.
+    </p>
+
+    <div class="available-features">
+      <h3>Status Fitur</h3>
+      <div class="feature-item available">✅ Spin Wheel (offline)</div>
+      <div class="feature-item available">✅ Truth or Dare (offline)</div>
+      <div class="feature-item available">✅ Double Spin (offline)</div>
+      <div class="feature-item available">✅ Riwayat Tersimpan (lokal)</div>
+      <div class="feature-item unavailable">❌ Main Bareng (butuh internet)</div>
+      <div class="feature-item unavailable">❌ Sinkronisasi Supabase</div>
+    </div>
+
+    <div class="buttons">
+      <button class="btn btn-primary" onclick="tryReconnect()">🔄 Coba Lagi</button>
+      <a href="dashboard.html" class="btn btn-secondary">🎰 Tetap ke Dashboard</a>
+    </div>
+
+    <div class="reconnect-status" id="reconnectStatus">
+      Memeriksa koneksi secara otomatis dalam <span id="reconnectTimer">30</span> detik…
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    let countdown = 30;
+    let timerEl = document.getElementById('reconnectTimer');
+    let toastEl = document.getElementById('toast');
+
+    function showToast(msg) {
+      toastEl.textContent = msg;
+      toastEl.classList.add('show');
+      setTimeout(() => toastEl.classList.remove('show'), 3000);
+    }
+
+    function tryReconnect() {
+      if (navigator.onLine) {
+        showToast('✅ Koneksi tersambung! Mengalihkan…');
+        setTimeout(() => window.location.href = 'dashboard.html', 1200);
+      } else {
+        showToast('❌ Masih offline, coba lagi sebentar…');
+        countdown = 30;
+        timerEl.textContent = countdown;
+      }
+    }
+
+    // Auto countdown
+    const interval = setInterval(() => {
+      countdown--;
+      if (timerEl) timerEl.textContent = countdown;
+
+      if (countdown <= 0) {
+        tryReconnect();
+        countdown = 30;
+      }
+    }, 1000);
+
+    // Online event listener
+    window.addEventListener('online', () => {
+      clearInterval(interval);
+      showToast('🎉 Koneksi kembali! Mengalihkan…');
+      setTimeout(() => window.location.href = 'dashboard.html', 1200);
+    });
+
+    // Offline event listener
+    window.addEventListener('offline', () => {
+      showToast('📡 Masih offline…');
+    });
+  </script>
+</body>
+</html>
