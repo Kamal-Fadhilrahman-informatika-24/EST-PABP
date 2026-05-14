@@ -9,21 +9,17 @@
   <meta name="description" content="Putar roda, dapatkan keputusan!">
   <link rel="manifest" href="manifest.json">
 
-  <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="SpinDecide">
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="global-features.css">
-  <!-- ── Global Features: Dark Mode + Mute Control ── -->
   <script src="theme-controller.js"></script>
   <script src="audio-controller.js"></script>
 </head>
 <body class="dashboard-page">
 
-  <!-- ── Navbar ─────────────────────────────────────────────── -->
   <nav class="navbar">
     <div class="nav-logo">
       <span>🎯</span>
@@ -45,32 +41,41 @@
     </div>
   </nav>
 
-  <!-- ── Layout Utama ──────────────────────────────────────── -->
-  <!--
-    Desktop: grid 2 kolom (sidebar | wheel)
-    Mobile:  grid 1 kolom (sidebar atas, wheel bawah)
-    Diatur di style.css dengan media query
-  -->
   <div class="dashboard-layout">
 
-    <!-- ─ Sidebar Kiri: Form input pilihan ─────────────────── -->
     <aside class="sidebar">
 
       <div class="panel">
-        <div class="panel-title">✏️ Tambah Pilihan</div>
+        <div class="panel-title">✏️ Pengaturan Putaran</div>
 
-        <div class="input-row">
+        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+          <button id="btnModeNormal" class="quick-btn" style="flex:1; border-color: var(--accent-4); background: rgba(77, 150, 255, 0.1);" onclick="setMode('normal')">🟢 Mode Normal</button>
+          <button id="btnModeBobot" class="quick-btn" style="flex:1;" onclick="setMode('bobot')">⚖️ Mode Bobot</button>
+        </div>
+
+        <div class="input-row" style="display: flex; gap: 8px; flex-wrap: wrap;">
           <input
             type="text"
             id="optionInput"
-            placeholder="Contoh: Nasi Goreng"
+            placeholder="Ketik pilihan..."
             maxlength="40"
+            style="flex: 2; min-width: 120px;"
             onkeydown="handleInputKey(event)"
           >
-          <button class="btn-add" onclick="addOption()">+ Tambah</button>
+          <input
+            type="number"
+            id="weightInput"
+            placeholder="Bobot"
+            min="1"
+            max="100"
+            value="1"
+            style="display: none; flex: 1; min-width: 70px; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border); background: var(--bg-input); color: var(--text-primary); font-family: var(--font-main);"
+            onkeydown="handleInputKey(event)"
+          >
+          <button class="btn-add" style="flex: 1; min-width: 100%;" onclick="addOption()">+ Tambah</button>
         </div>
 
-        <div class="options-header">
+        <div class="options-header" style="margin-top: 15px;">
           <span>Daftar Pilihan</span>
           <span><strong id="optionCount">0</strong>/12</span>
         </div>
@@ -83,7 +88,6 @@
         </div>
       </div>
 
-      <!-- Contoh pilihan cepat -->
       <div class="panel">
         <div class="panel-title">⚡ Contoh Cepat</div>
         <div style="display: flex; flex-wrap: wrap; gap: 8px;">
@@ -95,63 +99,54 @@
 
     </aside>
 
-    <!-- ─ Area Kanan: Roda & tombol spin ────────────────────── -->
     <main class="wheel-area">
-
       <div class="wheel-wrapper">
         <div id="wheelContainer">
           <canvas id="wheelCanvas" width="420" height="420"></canvas>
         </div>
-        <!-- Penunjuk (pointer) di kanan roda -->
         <div class="wheel-pointer"></div>
       </div>
 
       <button class="btn-spin" id="spinBtn" onclick="spinWheel()">
         🎰 PUTAR!
       </button>
-
     </main>
 
-  </div><!-- end dashboard-layout -->
+  </div>
 
-  <!-- ── Result Overlay ─────────────────────────────────────── -->
   <div class="result-overlay" id="resultOverlay">
     <div class="result-card">
       <span class="result-emoji">🏆</span>
       <div class="result-label">Hasilnya adalah…</div>
       <div id="resultText">–</div>
-      <div class="result-actions">
+      
+      <div class="result-actions" style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 20px;">
         <button class="btn-close-result" onclick="closeResult()">Tutup</button>
+        <button class="btn-remove-winner" onclick="removeWinnerAndClose()">🗑️ Hapus Pilihan</button>
         <button class="btn-spin-again" onclick="closeResult(); spinWheel();">Putar Lagi!</button>
       </div>
     </div>
   </div>
 
-  <!-- ── Toast ──────────────────────────────────────────────── -->
   <div class="toast" id="toast"></div>
 
-  <!-- ── Scripts ────────────────────────────────────────────── -->
   <script src="supabase.js"></script>
   <script src="auth.js"></script>
   <script src="spin.js"></script>
 
   <script>
-    // ── Inisialisasi halaman ────────────────────────────────
     (async function init() {
       const session = await requireAuth();
       const user    = session.user;
 
-      // Tampilkan nama & avatar
       const name = user.user_metadata?.name || user.email.split('@')[0];
       document.getElementById('userName').textContent = name;
       document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
 
-      // Gambar roda awal
       resizeCanvas();
       window.addEventListener('resize', resizeCanvas);
     })();
 
-    // ── Preset pilihan cepat ────────────────────────────────
     const PRESETS = {
       makan:   ['Nasi Goreng', 'Mie Ayam', 'Bakso', 'Pecel Lele', 'Soto', 'Warteg'],
       weekend: ['Main game', 'Nonton film', 'Tidur', 'Jalan-jalan', 'Baca buku', 'Olahraga'],
@@ -161,14 +156,13 @@
     function loadPreset(key) {
       const preset = PRESETS[key];
       if (!preset) return;
-      options = [...preset];
+      options = preset.map(item => ({ text: item, weight: 1 }));
       renderOptions();
       drawWheel();
       showToast(`Preset "${key}" dimuat! ✓`, 'success');
     }
   </script>
 
-  <!-- ── Style tambahan untuk quick-btn ─────────────────────── -->
   <style>
     .quick-btn {
       background: var(--bg-card); border: 1px solid var(--border);
@@ -181,18 +175,23 @@
       color: var(--text-primary); background: var(--bg-input);
       border-color: var(--accent-4);
     }
-  </style>
-
-  <!-- ── Service Worker (PWA) ───────────────────────────────── -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-          .then(() => console.log('SW registered'))
-          .catch(err => console.log('SW failed:', err));
-      });
+    /* STYLING UNTUK TOMBOL HAPUS DI POP-UP */
+    .btn-remove-winner {
+      background: rgba(255, 107, 107, 0.1);
+      border: 1px solid var(--accent-1);
+      color: var(--accent-1);
+      padding: 10px 20px;
+      border-radius: 50px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
     }
-  </script>
+    .btn-remove-winner:hover {
+      background: rgba(255, 107, 107, 0.2);
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255, 107, 107, 0.2);
+    }
+  </style>
 
 </body>
 </html>

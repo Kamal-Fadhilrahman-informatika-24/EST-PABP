@@ -16,13 +16,11 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="global-features.css">
   <link rel="stylesheet" href="double-spin.css">
-  <!-- ── Global Features: Dark Mode + Mute Control ── -->
   <script src="theme-controller.js"></script>
   <script src="audio-controller.js"></script>
 </head>
 <body class="dashboard-page">
 
-  <!-- ── Navbar ─────────────────────────────────────────────── -->
   <nav class="navbar">
     <div class="nav-logo">
       <span>🎯</span>
@@ -44,20 +42,16 @@
     </div>
   </nav>
 
-  <!-- ── Hero ───────────────────────────────────────────────── -->
   <div class="ds-hero">
     <div class="ds-hero-badge">⚡ Mode Baru</div>
     <h1 class="ds-hero-title">Double Spin</h1>
     <p class="ds-hero-sub">Dua roda sekaligus — pasangkan anggota dengan tugas secara otomatis!</p>
   </div>
 
-  <!-- ── Main Layout ───────────────────────────────────────── -->
   <div class="ds-layout">
 
-    <!-- ── Dual Wheel Area ───────────────────────────────────── -->
     <div class="ds-wheels-row">
 
-      <!-- Roda Kiri -->
       <div class="ds-wheel-panel">
         <div class="ds-wheel-label">
           <span class="ds-wheel-badge ds-badge-left">Roda A</span>
@@ -69,13 +63,11 @@
         </div>
       </div>
 
-      <!-- VS Divider -->
       <div class="ds-vs-col">
         <div class="ds-vs-badge">⚡</div>
         <div class="ds-connector-line" id="connectorLine"></div>
       </div>
 
-      <!-- Roda Kanan -->
       <div class="ds-wheel-panel">
         <div class="ds-wheel-label">
           <span class="ds-wheel-badge ds-badge-right">Roda B</span>
@@ -89,7 +81,6 @@
 
     </div>
 
-    <!-- ── Spin Control ───────────────────────────────────────── -->
     <div class="ds-control-row">
       <button class="btn-spin ds-btn-double-spin" id="doubleSpinBtn" onclick="doubleSpin()">
         ⚡ DOUBLE SPIN!
@@ -97,7 +88,6 @@
       <button class="ds-btn-reset" onclick="resetDoubleResult()">🔄 Reset Hasil</button>
     </div>
 
-    <!-- ── Results Area ───────────────────────────────────────── -->
     <div class="ds-results-area" id="dsResultsArea" style="display:none">
       <div class="ds-results-header">
         <span class="ds-results-title">✨ Hasil Pasangan</span>
@@ -106,10 +96,8 @@
       <div class="ds-results-list" id="dsResultsList"></div>
     </div>
 
-    <!-- ── Input Panel (2 kolom) ─────────────────────────────── -->
     <div class="ds-inputs-grid">
 
-      <!-- Panel Roda A -->
       <div class="ds-input-panel">
         <div class="panel-title">✏️ Roda A — <span id="leftTitleEditable" class="ds-editable-title" onclick="editTitle('left')" title="Klik untuk edit">Nama Anggota</span></div>
 
@@ -137,7 +125,6 @@
         </div>
       </div>
 
-      <!-- Panel Roda B -->
       <div class="ds-input-panel">
         <div class="panel-title">✏️ Roda B — <span id="rightTitleEditable" class="ds-editable-title" onclick="editTitle('right')" title="Klik untuk edit">Tugas / Peran</span></div>
 
@@ -169,10 +156,21 @@
 
   </div>
 
-  <!-- ── Toast ──────────────────────────────────────────────── -->
+  <div id="dsResultModal" class="ds-modal-overlay" style="display:none;">
+    <div class="ds-modal-card">
+      <div class="ds-modal-badge">✨ PASANGAN TERPILIH ✨</div>
+      <div class="ds-modal-pair">
+        <div class="ds-modal-item" id="modalLeftItem">Anggota</div>
+        <div class="ds-modal-vs">⚡</div>
+        <div class="ds-modal-item" id="modalRightItem">Tugas</div>
+      </div>
+      <p class="ds-modal-desc">Keduanya telah otomatis dihapus dari putaran roda berikutnya.</p>
+      <button class="ds-btn-massive" onclick="closeDsResultModal()">MANTAP! Lanjut Putar 🚀</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
-  <!-- ── Scripts ────────────────────────────────────────────── -->
   <script src="supabase.js"></script>
   <script src="auth.js"></script>
   <script src="double-spin.js"></script>
@@ -186,14 +184,6 @@
       document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
       initDoubleSpinPage();
     })();
-  </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
-      });
-    }
   </script>
 
 </body>

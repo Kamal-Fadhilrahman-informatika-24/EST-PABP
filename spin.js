@@ -1,21 +1,64 @@
 // ============================================================
-// spin.js - LOGIKA SPIN WHEEL
+// spin.js - LOGIKA SPIN WHEEL DENGAN TOGGLE MODE & HAPUS PEMENANG
 // ============================================================
 
-let options = [];       // daftar pilihan user
-let isSpinning = false; // mencegah double-spin
-let currentAngle = 0;   // posisi roda saat ini
+let options = [];       
+let isSpinning = false; 
+let currentAngle = 0;   
+let spinMode = 'normal'; 
+let lastWinnerIndex = -1; // MEMORI UNTUK MENGINGAT SIAPA YANG BARU MENANG
 
-// Warna segmen roda — urut, akan diulang jika pilihan > 8
 const COLORS = [
   '#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF',
   '#FF9A3C', '#C77DFF', '#00C9A7', '#F72585'
 ];
 
+// ── Fungsi Mengubah Mode (Normal <-> Bobot) ──────────────────
+function setMode(mode) {
+  spinMode = mode;
+  
+  const btnNormal = document.getElementById('btnModeNormal');
+  const btnBobot = document.getElementById('btnModeBobot');
+  const weightInput = document.getElementById('weightInput');
+
+  if (mode === 'normal') {
+    btnNormal.style.borderColor = 'var(--accent-4)';
+    btnNormal.style.background = 'rgba(77, 150, 255, 0.1)';
+    btnNormal.style.color = 'var(--text-primary)';
+    
+    btnBobot.style.borderColor = 'var(--border)';
+    btnBobot.style.background = 'var(--bg-card)';
+    btnBobot.style.color = 'var(--text-secondary)';
+    
+    weightInput.style.display = 'none'; 
+  } else {
+    btnBobot.style.borderColor = 'var(--accent-4)';
+    btnBobot.style.background = 'rgba(77, 150, 255, 0.1)';
+    btnBobot.style.color = 'var(--text-primary)';
+    
+    btnNormal.style.borderColor = 'var(--border)';
+    btnNormal.style.background = 'var(--bg-card)';
+    btnNormal.style.color = 'var(--text-secondary)';
+    
+    weightInput.style.display = 'inline-block'; 
+  }
+
+  renderOptions();
+  drawWheel();
+}
+
 // ── Tambah pilihan ke daftar ─────────────────────────────────
 function addOption() {
-  const input = document.getElementById('optionInput');
-  const text = input.value.trim();
+  const textInput = document.getElementById('optionInput');
+  const weightInput = document.getElementById('weightInput');
+  
+  const text = textInput.value.trim();
+  let weight = 1;
+
+  if (spinMode === 'bobot') {
+    weight = parseInt(weightInput.value);
+    if (isNaN(weight) || weight < 1) weight = 1;
+  }
 
   if (!text) {
     showToast('Masukkan teks pilihan dulu!', 'error');
@@ -25,14 +68,17 @@ function addOption() {
     showToast('Maksimal 12 pilihan!', 'error');
     return;
   }
-  if (options.includes(text)) {
+  if (options.some(opt => opt.text.toLowerCase() === text.toLowerCase())) {
     showToast('Pilihan sudah ada!', 'error');
     return;
   }
 
-  options.push(text);
-  input.value = '';
-  input.focus();
+  options.push({ text: text, weight: weight });
+  
+  textInput.value = '';
+  weightInput.value = '1';
+  textInput.focus();
+  
   renderOptions();
   drawWheel();
 }
@@ -60,13 +106,19 @@ function renderOptions() {
     return;
   }
 
-  list.innerHTML = options.map((opt, i) => `
-    <div class="option-item" style="--color: ${COLORS[i % COLORS.length]}">
-      <span class="option-dot"></span>
-      <span class="option-text">${escapeHtml(opt)}</span>
-      <button class="option-remove" onclick="removeOption(${i})" title="Hapus">✕</button>
-    </div>
-  `).join('');
+  list.innerHTML = options.map((opt, i) => {
+    const weightLabel = spinMode === 'bobot' 
+      ? `<small style="color: var(--accent-4); font-weight:bold; margin-left:5px;">(Bobot: ${opt.weight})</small>`
+      : '';
+
+    return `
+      <div class="option-item" style="--color: ${COLORS[i % COLORS.length]}">
+        <span class="option-dot"></span>
+        <span class="option-text">${escapeHtml(opt.text)} ${weightLabel}</span>
+        <button class="option-remove" onclick="removeOption(${i})" title="Hapus">✕</button>
+      </div>
+    `;
+  }).join('');
 }
 
 // ── Gambar roda di canvas ─────────────────────────────────────
@@ -81,7 +133,6 @@ function drawWheel(highlightIndex = -1) {
   ctx.clearRect(0, 0, size, size);
 
   if (options.length === 0) {
-    // Tampilkan roda kosong
     ctx.beginPath();
     ctx.arc(cx, cy, radius, 0, Math.PI * 2);
     ctx.fillStyle = '#1e1e2e';
@@ -99,15 +150,23 @@ function drawWheel(highlightIndex = -1) {
     return;
   }
 
-  const arc = (Math.PI * 2) / options.length;
+  const totalWeight = spinMode === 'bobot' 
+    ? options.reduce((sum, opt) => sum + opt.weight, 0)
+    : options.length;
+
+  let currentSliceAngle = currentAngle;
 
   options.forEach((opt, i) => {
-    const startAngle = arc * i + currentAngle;
-    const endAngle = startAngle + arc;
+    const sliceWeight = spinMode === 'bobot' ? opt.weight : 1;
+    const sliceArc = (sliceWeight / totalWeight) * Math.PI * 2;
+    const startAngle = currentSliceAngle;
+    const endAngle = startAngle + sliceArc;
+    
+    currentSliceAngle += sliceArc; 
+
     const color = COLORS[i % COLORS.length];
     const isHighlighted = i === highlightIndex;
 
-    // Segmen
     ctx.beginPath();
     ctx.moveTo(cx, cy);
     ctx.arc(cx, cy, isHighlighted ? radius + 5 : radius, startAngle, endAngle);
@@ -118,10 +177,9 @@ function drawWheel(highlightIndex = -1) {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Teks di segmen
     ctx.save();
     ctx.translate(cx, cy);
-    ctx.rotate(startAngle + arc / 2);
+    ctx.rotate(startAngle + sliceArc / 2);
     ctx.textAlign = 'right';
     ctx.fillStyle = '#fff';
     ctx.shadowColor = 'rgba(0,0,0,0.5)';
@@ -130,15 +188,22 @@ function drawWheel(highlightIndex = -1) {
     const fontSize = options.length > 8 ? 11 : 13;
     ctx.font = `bold ${fontSize}px Sora, sans-serif`;
     
-    // Potong teks jika terlalu panjang
-    let label = opt;
+    let label = opt.text;
     if (label.length > 14) label = label.substring(0, 12) + '…';
     
-    ctx.fillText(label, radius - 15, 5);
+    if (spinMode === 'bobot') {
+      const percentage = Math.round((sliceWeight / totalWeight) * 100);
+      ctx.fillText(label, radius - 15, -4);
+      ctx.font = `bold 10px Sora, sans-serif`;
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillText(`${percentage}%`, radius - 15, 10);
+    } else {
+      ctx.fillText(label, radius - 15, 5);
+    }
+    
     ctx.restore();
   });
 
-  // Lingkaran tengah
   ctx.beginPath();
   ctx.arc(cx, cy, 22, 0, Math.PI * 2);
   ctx.fillStyle = '#0f0f1a';
@@ -147,7 +212,6 @@ function drawWheel(highlightIndex = -1) {
   ctx.lineWidth = 3;
   ctx.stroke();
 
-  // Logo/ikon tengah
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 16px sans-serif';
   ctx.textAlign = 'center';
@@ -167,17 +231,15 @@ async function spinWheel() {
   document.getElementById('spinBtn').disabled = true;
   document.getElementById('spinBtn').textContent = '🌀 Berputar...';
 
-  // ── Spin SFX ──────────────────────────────────────────────
   if (window.AudioController) AudioController.playSpinSound();
 
-  // Animasi spin
-  const totalRotation = (Math.PI * 2 * (5 + Math.random() * 5));   // 5–10 putaran
-  const duration = 4000 + Math.random() * 1000;  // 4–5 detik
+  const totalRotation = (Math.PI * 2 * (5 + Math.random() * 5)); 
+  const duration = 4000 + Math.random() * 1000;
   const startAngle = currentAngle;
   const startTime = performance.now();
 
   function easeOut(t) {
-    return 1 - Math.pow(1 - t, 4); // ease-out quartic
+    return 1 - Math.pow(1 - t, 4); 
   }
 
   function animate(now) {
@@ -191,16 +253,32 @@ async function spinWheel() {
     if (progress < 1) {
       requestAnimationFrame(animate);
     } else {
-      // Hitung hasil
-      const arc = (Math.PI * 2) / options.length;
-      // Penunjuk ada di kanan (angle 0), normalisasi
       const normalizedAngle = ((currentAngle % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
       const pointerAngle = (Math.PI * 2 - normalizedAngle) % (Math.PI * 2);
-      const winnerIndex = Math.floor(pointerAngle / arc) % options.length;
-      const winner = options[winnerIndex];
 
-      drawWheel(winnerIndex); // highlight pemenang
-      // ── Stop Spin SFX ──────────────────────────────────────────────
+      const totalWeight = spinMode === 'bobot' 
+        ? options.reduce((sum, opt) => sum + opt.weight, 0)
+        : options.length;
+        
+      let angleAccumulator = 0;
+      let winnerIndex = 0;
+
+      for (let i = 0; i < options.length; i++) {
+        const sliceWeight = spinMode === 'bobot' ? options[i].weight : 1;
+        const sliceArc = (sliceWeight / totalWeight) * Math.PI * 2;
+        if (pointerAngle >= angleAccumulator && pointerAngle < angleAccumulator + sliceArc) {
+          winnerIndex = i;
+          break;
+        }
+        angleAccumulator += sliceArc;
+      }
+
+      // SIMPAN INDEX PEMENANG KE MEMORI
+      lastWinnerIndex = winnerIndex;
+      const winner = options[winnerIndex].text;
+
+      drawWheel(winnerIndex); 
+      
       if (window.AudioController) AudioController.stopSpinSound();
       showResult(winner);
       saveSpinResult(winner);
@@ -222,12 +300,25 @@ function showResult(winner) {
   resultText.textContent = winner;
   overlay.classList.add('visible');
 
-  // Confetti effect
   launchConfetti();
 }
 
 function closeResult() {
   document.getElementById('resultOverlay').classList.remove('visible');
+}
+
+// ── HAPUS PEMENANG LALU TUTUP (FITUR BARU) ───────────────────
+function removeWinnerAndClose() {
+  if (lastWinnerIndex > -1 && lastWinnerIndex < options.length) {
+    const removedOption = options.splice(lastWinnerIndex, 1)[0];
+    
+    // Perbarui Tampilan
+    renderOptions();
+    drawWheel();
+    
+    showToast(`"${removedOption.text}" dihapus dari roda!`, 'success');
+  }
+  closeResult(); // Tutup pop-up
 }
 
 // ── Simpan hasil ke Supabase ──────────────────────────────────
@@ -236,11 +327,13 @@ async function saveSpinResult(result) {
     const user = await getCurrentUser();
     if (!user) return;
 
+    const plainOptions = options.map(opt => opt.text);
+
     const { error } = await supabaseClient
       .from('spins')
       .insert({
         user_id: user.id,
-        options: options,       // array of strings
+        options: plainOptions,       
         result: result,
         created_at: new Date().toISOString()
       });
@@ -303,7 +396,6 @@ function showToast(msg, type = 'info') {
   setTimeout(() => toast.classList.remove('visible'), 3000);
 }
 
-// ── Resize canvas responsif ────────────────────────────────────
 function resizeCanvas() {
   const canvas = document.getElementById('wheelCanvas');
   const container = document.getElementById('wheelContainer');

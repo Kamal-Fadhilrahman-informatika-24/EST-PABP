@@ -9,7 +9,6 @@
   <meta name="description" content="Main Truth or Dare seru bersama teman-teman!">
   <link rel="manifest" href="manifest.json">
 
-  <!-- iOS PWA -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
@@ -17,13 +16,11 @@
   <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="global-features.css">
   <link rel="stylesheet" href="truth-dare.css">
-  <!-- ── Global Features: Dark Mode + Mute Control ── -->
   <script src="theme-controller.js"></script>
   <script src="audio-controller.js"></script>
 </head>
 <body class="dashboard-page">
 
-  <!-- ── Navbar ─────────────────────────────────────────────── -->
   <nav class="navbar">
     <div class="nav-logo">
       <span>🎯</span>
@@ -45,115 +42,85 @@
     </div>
   </nav>
 
-  <!-- ── Hero Header ────────────────────────────────────────── -->
   <div class="td-hero">
-    <div class="td-hero-badge">🎭 Mode Permainan</div>
+    <div class="td-hero-badge">🎰 Roda Putar Interaktif</div>
     <h1 class="td-hero-title">Truth <span class="td-or">or</span> Dare</h1>
-    <p class="td-hero-sub">Pilih tantangan, jawab dengan jujur, atau berani buktikan!</p>
   </div>
 
-  <!-- ── Main Layout ───────────────────────────────────────── -->
   <div class="td-layout">
-
-    <!-- ── Mode Selector ─────────────────────────────────────── -->
-    <div class="td-mode-selector" id="modeSelector">
-      <button class="td-mode-btn td-truth-btn" id="truthBtn" onclick="selectMode('truth')">
-        <span class="td-mode-icon">🧠</span>
-        <span class="td-mode-label">TRUTH</span>
-        <span class="td-mode-desc">Jawab pertanyaan jujur</span>
-      </button>
-      <div class="td-mode-divider">
-        <span>VS</span>
-      </div>
-      <button class="td-mode-btn td-dare-btn" id="dareBtn" onclick="selectMode('dare')">
-        <span class="td-mode-icon">🔥</span>
-        <span class="td-mode-label">DARE</span>
-        <span class="td-mode-desc">Terima tantangan berani</span>
-      </button>
-    </div>
-
-    <!-- ── Card Display ──────────────────────────────────────── -->
-    <div class="td-card-area" id="cardArea">
-
-      <!-- Idle state (belum pilih mode) -->
-      <div class="td-idle" id="tdIdle">
-        <div class="td-idle-icon">👆</div>
-        <p>Pilih <strong>Truth</strong> atau <strong>Dare</strong> di atas untuk memulai!</p>
-      </div>
-
-      <!-- Card result -->
-      <div class="td-card" id="tdCard" style="display:none">
-        <div class="td-card-header">
-          <div class="td-card-badge" id="tdCardBadge">TRUTH</div>
-          <div class="td-card-counter" id="tdCardCounter">1 / 35</div>
+    
+    <div id="setupSection" class="td-section active">
+      <div class="td-panel">
+        <h2>1. Siapa yang main?</h2>
+        <div class="td-add-player-form">
+          <input type="text" id="playerNameInput" placeholder="Ketik nama pemain..." onkeydown="handlePlayerKey(event)">
+          <button onclick="addPlayer()">Tambah</button>
         </div>
-        <div class="td-card-body">
-          <div class="td-card-icon" id="tdCardIcon">🧠</div>
-          <div class="td-card-text" id="tdCardText">
-            Loading...
+        <div class="td-players-list" id="tdPlayersList">
+          <div class="td-no-players">Belum ada pemain. Tambahkan minimal 2 orang!</div>
+        </div>
+      </div>
+
+      <div class="td-panel">
+        <h2>2. Buat Tantanganmu Sendiri! (Satu baris = Satu pertanyaan)</h2>
+        <div class="td-textareas">
+          <div class="td-textarea-group">
+            <label>Kategori TRUTH 🧠</label>
+            <textarea id="truthInput" rows="6" placeholder="Contoh:&#10;1. Siapa crush kamu saat ini?&#10;2. Kapan terakhir kali kamu menangis?"></textarea>
+          </div>
+          <div class="td-textarea-group">
+            <label>Kategori DARE 🔥</label>
+            <textarea id="dareInput" rows="6" placeholder="Contoh:&#10;1. Nyanyikan lagu balonku pakai huruf O&#10;2. Telepon mantan sekarang juga!"></textarea>
           </div>
         </div>
-        <div class="td-card-actions">
-          <button class="td-btn-back" onclick="backToSelect()">
-            ← Ganti Mode
-          </button>
-          <button class="td-btn-next" id="tdNextBtn" onclick="nextCard()">
-            🎲 Random Lagi!
-          </button>
-        </div>
-        <!-- Progress bar -->
-        <div class="td-progress-bar">
-          <div class="td-progress-fill" id="tdProgressFill"></div>
-        </div>
       </div>
 
+      <button class="td-btn-massive" id="startBtn" onclick="startGame()">MULAI PUTARAN 🚀</button>
     </div>
 
-    <!-- ── Player Tracker ────────────────────────────────────── -->
-    <div class="td-players-panel">
-      <div class="td-players-header">
-        <span class="panel-title">👥 Giliran Pemain</span>
-        <button class="td-btn-add-player" onclick="showAddPlayer()">+ Tambah</button>
+    <div id="playSection" class="td-section" style="display:none; text-align:center;">
+      
+      <h2 id="playTitle" class="td-spin-title">Giliran Siapa Selanjutnya?</h2>
+      
+      <div class="td-wheel-wrapper">
+         <div class="td-wheel-pointer"></div>
+         <canvas id="tdWheel" width="350" height="350"></canvas>
       </div>
-      <div class="td-players-list" id="tdPlayersList">
-        <div class="td-no-players">
-          <span>Tambahkan nama pemain untuk track giliran!</span>
-        </div>
-      </div>
-      <div class="td-add-player-form" id="addPlayerForm" style="display:none">
-        <input type="text" id="playerNameInput" placeholder="Nama pemain..." maxlength="20"
-               onkeydown="handlePlayerKey(event)">
-        <button onclick="addPlayer()">Tambah</button>
-        <button onclick="hideAddPlayer()" class="cancel">Batal</button>
-      </div>
-    </div>
 
-    <!-- ── Stats ─────────────────────────────────────────────── -->
-    <div class="td-stats">
-      <div class="td-stat">
-        <span class="td-stat-value" id="statTruthCount">0</span>
-        <span class="td-stat-label">Truth</span>
+      <div class="td-spin-box task-box" id="wheelResultText">Menunggu Putaran...</div>
+
+      <div id="actionArea">
+        <button class="td-btn-spin" id="btnSpinName" onclick="doSpinName()">🎲 PUTAR RODA NAMA</button>
+        
+        <div id="choiceArea" style="display:none;">
+          <h3 style="margin-bottom:20px;"><span id="chosenNameHighlight" class="highlight-text"></span>, Pilih Nasibmu!</h3>
+          <button class="td-mode-btn td-truth-btn" style="display:inline-block; margin-right:15px; padding: 15px 30px;" onclick="doChooseMode('truth')">🧠 TRUTH</button>
+          <button class="td-mode-btn td-dare-btn" style="display:inline-block; padding: 15px 30px;" onclick="doChooseMode('dare')">🔥 DARE</button>
+        </div>
+
+        <button class="td-btn-spin" id="btnSpinTask" style="display:none;" onclick="doSpinTask()">🎲 PUTAR TANTANGAN</button>
+        
+        <button class="td-btn-next-round" id="btnNextRound" style="display:none;" onclick="startNewRound()">🔄 PUTAR NAMA LAGI</button>
       </div>
-      <div class="td-stat">
-        <span class="td-stat-value" id="statDareCount">0</span>
-        <span class="td-stat-label">Dare</span>
-      </div>
-      <div class="td-stat">
-        <span class="td-stat-value" id="statTotalCount">0</span>
-        <span class="td-stat-label">Total Ronde</span>
-      </div>
-      <button class="td-btn-reset-stats" onclick="resetStats()">🔄 Reset</button>
+
+      <button class="td-btn-back-setup" onclick="backToSetup()" style="margin-top:30px;">Kembali ke Pengaturan</button>
     </div>
 
   </div>
 
-  <!-- ── Toast ──────────────────────────────────────────────── -->
+  <div id="resultModal" class="td-modal-overlay" style="display:none;">
+    <div class="td-modal-card">
+      <div class="td-modal-badge" id="modalBadge">🔥 DARE</div>
+      <h3 class="td-modal-title">Untuk <span id="modalPlayerName" class="highlight-text">Pemain</span>!</h3>
+      <div class="td-modal-task" id="modalTaskText">Tugasnya di sini...</div>
+      <button class="td-btn-massive" onclick="closeResultModal()">SIAP LAKSANAKAN! 🫡</button>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
-  <!-- ── Scripts ────────────────────────────────────────────── -->
   <script src="supabase.js"></script>
   <script src="auth.js"></script>
-  <script src="truth-dare-data.js"></script>
   <script src="truth-dare.js"></script>
 
   <script>
@@ -165,14 +132,5 @@
       document.getElementById('userAvatar').textContent = name.charAt(0).toUpperCase();
     })();
   </script>
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js').catch(() => {});
-      });
-    }
-  </script>
-
 </body>
 </html>

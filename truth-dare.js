@@ -1,247 +1,267 @@
 // ============================================================
-// truth-dare.js — LOGIKA TRUTH OR DARE
+// truth-dare.js — LOGIKA RODA PUTAR (WHEEL) TRUTH OR DARE
 // ============================================================
 
-// ── State ────────────────────────────────────────────────────
-let currentMode = null;         // 'truth' | 'dare' | null
-let currentIndex = -1;          // index kartu saat ini
-let shuffledTruths = [];
-let shuffledDares = [];
-let players = [];               // array nama pemain
-let currentPlayerIndex = 0;     // giliran pemain saat ini
-let stats = { truth: 0, dare: 0 };
+let players = [];
+let customTruths = [];
+let customDares = [];
 
-// ── Inisialisasi & load saved state ──────────────────────────
-function initTD() {
-  const saved = localStorage.getItem('td_stats');
-  if (saved) {
-    try {
-      stats = JSON.parse(saved);
-      updateStats();
-    } catch (_) {}
-  }
+let selectedPlayer = '';
+let selectedMode = '';
+let isSpinning = false;
+let currentRotation = 0; 
+let animationFrameId = null;
 
+const wheelColors = ['#FF6B6B', '#4D96FF', '#FFD93D', '#6BCB77', '#C77DFF', '#FF9A3C'];
+
+// ── INIT & SETUP ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
   const savedPlayers = localStorage.getItem('td_players');
   if (savedPlayers) {
-    try {
-      players = JSON.parse(savedPlayers);
-      renderPlayers();
-    } catch (_) {}
+    players = JSON.parse(savedPlayers);
+    renderPlayers();
   }
-
-  shuffledTruths = shuffle([...TRUTH_QUESTIONS]);
-  shuffledDares  = shuffle([...DARE_CHALLENGES]);
-}
-
-// ── Pilih Mode ────────────────────────────────────────────────
-function selectMode(mode) {
-  currentMode = mode;
-
-  // Update button state
-  document.getElementById('truthBtn').classList.toggle('active', mode === 'truth');
-  document.getElementById('dareBtn').classList.toggle('active', mode === 'dare');
-
-  // Reset index & show card
-  currentIndex = -1;
-  showCard();
-  nextCard();
-}
-
-// ── Tampilkan area kartu ──────────────────────────────────────
-function showCard() {
-  document.getElementById('tdIdle').style.display = 'none';
-  const card = document.getElementById('tdCard');
-  card.style.display = 'block';
-
-  // Apply mode class
-  card.classList.remove('truth-mode', 'dare-mode');
-  card.classList.add(currentMode + '-mode');
-
-  // Badge & icon
-  if (currentMode === 'truth') {
-    document.getElementById('tdCardBadge').textContent = '🧠 TRUTH';
-    document.getElementById('tdCardIcon').textContent  = '🧠';
-  } else {
-    document.getElementById('tdCardBadge').textContent = '🔥 DARE';
-    document.getElementById('tdCardIcon').textContent  = '🔥';
-  }
-}
-
-// ── Kartu berikutnya (random) ─────────────────────────────────
-function nextCard() {
-  if (!currentMode) return;
-
-  const pool = currentMode === 'truth' ? shuffledTruths : shuffledDares;
-
-  // Advance index, reshuffle bila habis
-  currentIndex++;
-  if (currentIndex >= pool.length) {
-    reshuffle();
-    currentIndex = 0;
-    showToast('Semua kartu sudah diputar, diacak ulang! ♻️', 'info');
-  }
-
-  const text = pool[currentIndex];
-
-  // Animate icon bounce
-  const icon = document.getElementById('tdCardIcon');
-  icon.style.animation = 'none';
-  void icon.offsetWidth; // reflow
-  icon.style.animation = 'tdIconBounce 0.5s cubic-bezier(0.34, 1.56, 0.64, 1)';
-
-  // Animate text
-  const textEl = document.getElementById('tdCardText');
-  textEl.style.animation = 'none';
-  void textEl.offsetWidth;
-  textEl.style.animation = 'tdTextIn 0.3s ease 0.1s both';
-  textEl.textContent = text;
-
-  // Counter
-  document.getElementById('tdCardCounter').textContent =
-    `${currentIndex + 1} / ${pool.length}`;
-
-  // Progress bar
-  const pct = ((currentIndex + 1) / pool.length) * 100;
-  document.getElementById('tdProgressFill').style.width = pct + '%';
-
-  // Update stats
-  stats[currentMode]++;
-  saveStats();
-  updateStats();
-
-  // Advance player turn
-  advancePlayer();
-
-  // Confetti ringan untuk dare
-  if (currentMode === 'dare') launchMiniConfetti();
-}
-
-// ── Kembali ke selector ───────────────────────────────────────
-function backToSelect() {
-  currentMode = null;
-  document.getElementById('tdIdle').style.display = 'block';
-  document.getElementById('tdCard').style.display = 'none';
-  document.getElementById('truthBtn').classList.remove('active');
-  document.getElementById('dareBtn').classList.remove('active');
-}
-
-// ── Reshuffle deck ────────────────────────────────────────────
-function reshuffle() {
-  shuffledTruths = shuffle([...TRUTH_QUESTIONS]);
-  shuffledDares  = shuffle([...DARE_CHALLENGES]);
-}
-
-// ── Player management ─────────────────────────────────────────
-function showAddPlayer() {
-  document.getElementById('addPlayerForm').style.display = 'flex';
-  document.getElementById('playerNameInput').focus();
-}
-
-function hideAddPlayer() {
-  document.getElementById('addPlayerForm').style.display = 'none';
-  document.getElementById('playerNameInput').value = '';
-}
+});
 
 function addPlayer() {
   const input = document.getElementById('playerNameInput');
-  const name = input.value.trim();
+  const name = input.value.trim().toUpperCase();
   if (!name) return;
   if (players.includes(name)) {
     showToast('Nama sudah ada!', 'error');
     return;
   }
   players.push(name);
-  savePlayers();
+  localStorage.setItem('td_players', JSON.stringify(players));
   renderPlayers();
-  hideAddPlayer();
-  showToast(`${name} ditambahkan! ✓`, 'success');
-}
-
-function removePlayer(index) {
-  players.splice(index, 1);
-  if (currentPlayerIndex >= players.length) currentPlayerIndex = 0;
-  savePlayers();
-  renderPlayers();
+  input.value = '';
 }
 
 function handlePlayerKey(e) {
   if (e.key === 'Enter') addPlayer();
-  if (e.key === 'Escape') hideAddPlayer();
 }
 
-function advancePlayer() {
-  if (players.length === 0) return;
-  currentPlayerIndex = (currentPlayerIndex + 1) % players.length;
+function removePlayer(index) {
+  players.splice(index, 1);
+  localStorage.setItem('td_players', JSON.stringify(players));
   renderPlayers();
 }
 
 function renderPlayers() {
   const list = document.getElementById('tdPlayersList');
   if (players.length === 0) {
-    list.innerHTML = '<div class="td-no-players"><span>Tambahkan nama pemain untuk track giliran!</span></div>';
+    list.innerHTML = '<div class="td-no-players">Belum ada pemain. Tambahkan minimal 2 orang!</div>';
     return;
   }
-
   list.innerHTML = players.map((name, i) => `
-    <div class="td-player-chip ${i === currentPlayerIndex ? 'active-turn' : ''}">
-      <div class="td-player-avatar">${name.charAt(0).toUpperCase()}</div>
+    <div class="td-player-chip">
       <span>${escapeHtml(name)}</span>
-      ${i === currentPlayerIndex ? '<span style="font-size:0.75rem;margin-left:2px">👑</span>' : ''}
-      <button class="td-player-remove" onclick="removePlayer(${i})" title="Hapus">✕</button>
+      <button class="td-player-remove" onclick="removePlayer(${i})">✕</button>
     </div>
   `).join('');
 }
 
-// ── Stats ─────────────────────────────────────────────────────
-function updateStats() {
-  document.getElementById('statTruthCount').textContent = stats.truth;
-  document.getElementById('statDareCount').textContent  = stats.dare;
-  document.getElementById('statTotalCount').textContent = stats.truth + stats.dare;
-}
+// ── MENGGAMBAR RODA DI KANVAS ─────────────────────────────────
+function drawWheel(items) {
+  const canvas = document.getElementById('tdWheel');
+  const ctx = canvas.getContext('2d');
+  const cx = canvas.width / 2;
+  const cy = canvas.height / 2;
+  const radius = cx;
+  const arc = (2 * Math.PI) / items.length;
 
-function resetStats() {
-  stats = { truth: 0, dare: 0 };
-  saveStats();
-  updateStats();
-  showToast('Statistik direset!', 'info');
-}
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-function saveStats() {
-  localStorage.setItem('td_stats', JSON.stringify(stats));
-}
+  for (let i = 0; i < items.length; i++) {
+    const angle = i * arc;
+    
+    ctx.beginPath();
+    ctx.fillStyle = wheelColors[i % wheelColors.length];
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, radius, angle, angle + arc);
+    ctx.lineTo(cx, cy);
+    ctx.fill();
+    ctx.stroke();
 
-function savePlayers() {
-  localStorage.setItem('td_players', JSON.stringify(players));
-}
-
-// ── Confetti ringan (khusus DARE) ────────────────────────────
-function launchMiniConfetti() {
-  const colors = ['#FF6B6B', '#FFD93D', '#FF9A3C'];
-  for (let i = 0; i < 20; i++) {
-    const dot = document.createElement('div');
-    dot.className = 'confetti-dot';
-    dot.style.cssText = `
-      left: ${Math.random() * 100}vw;
-      background: ${colors[Math.floor(Math.random() * colors.length)]};
-      animation-delay: ${Math.random() * 0.3}s;
-      width: ${4 + Math.random() * 6}px;
-      height: ${4 + Math.random() * 6}px;
-      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
-    `;
-    document.body.appendChild(dot);
-    setTimeout(() => dot.remove(), 2500);
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(angle + arc / 2);
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.shadowColor = 'rgba(0,0,0,0.8)';
+    ctx.shadowBlur = 4;
+    
+    let text = items[i];
+    if (text.length > 20) text = text.substring(0, 18) + '...';
+    
+    ctx.fillText(text, radius - 20, 0);
+    ctx.restore();
   }
 }
 
-// ── Utilities ─────────────────────────────────────────────────
-function shuffle(arr) {
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
+function resetWheelPosition() {
+  if(animationFrameId) cancelAnimationFrame(animationFrameId);
+  currentRotation = 0;
+  const canvas = document.getElementById('tdWheel');
+  canvas.style.transform = `rotate(0deg)`;
 }
 
+// ── FUNGSI PUTAR FISIK ────────────────────────────────────────
+function spinTheWheel(items, onComplete) {
+  if(isSpinning) return;
+  isSpinning = true;
+
+  const canvas = document.getElementById('tdWheel');
+  const winnerIndex = Math.floor(Math.random() * items.length);
+  const arcDeg = 360 / items.length;
+  const sliceCenter = (winnerIndex * arcDeg) + (arcDeg / 2);
+  const targetRotation = (270 - sliceCenter + 360) % 360;
+
+  const baseSpins = 5 * 360; 
+  let currentMod = currentRotation % 360;
+  if (currentMod < 0) currentMod += 360; 
+  let dist = targetRotation - currentMod;
+  if (dist <= 0) dist += 360;
+
+  const totalRotation = currentRotation + baseSpins + dist;
+  const startRotation = currentRotation;
+  const duration = 4000; 
+  const startTime = performance.now();
+
+  document.getElementById('wheelResultText').textContent = 'Memutar Roda... 🎲';
+
+  function easeOutQuart(t) {
+    return 1 - (--t) * t * t * t;
+  }
+
+  function animate(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const easedProgress = easeOutQuart(progress);
+
+    currentRotation = startRotation + (totalRotation - startRotation) * easedProgress;
+    canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+    if (progress < 1) {
+      animationFrameId = requestAnimationFrame(animate);
+    } else {
+      isSpinning = false;
+      document.getElementById('wheelResultText').textContent = items[winnerIndex];
+      onComplete(items[winnerIndex]);
+    }
+  }
+  animationFrameId = requestAnimationFrame(animate);
+}
+
+// ── FASE TRANSISI ─────────────────────────────────────────────
+function startGame() {
+  if (players.length < 2) {
+    showToast('Minimal butuh 2 pemain bosku!', 'error');
+    return;
+  }
+  
+  customTruths = document.getElementById('truthInput').value.split('\n').filter(t => t.trim() !== '');
+  customDares = document.getElementById('dareInput').value.split('\n').filter(d => d.trim() !== '');
+
+  if (customTruths.length === 0 || customDares.length === 0) {
+    showToast('Isian Truth dan Dare tidak boleh kosong!', 'error');
+    return;
+  }
+
+  document.getElementById('setupSection').style.display = 'none';
+  document.getElementById('playSection').style.display = 'block';
+  
+  startNewRound();
+}
+
+function backToSetup() {
+  document.getElementById('setupSection').style.display = 'block';
+  document.getElementById('playSection').style.display = 'none';
+}
+
+function startNewRound() {
+  document.getElementById('playTitle').textContent = 'Giliran Siapa Selanjutnya?';
+  document.getElementById('wheelResultText').textContent = 'Tunggu Diputar...';
+  
+  document.getElementById('btnSpinName').style.display = 'block';
+  document.getElementById('choiceArea').style.display = 'none';
+  document.getElementById('btnSpinTask').style.display = 'none';
+  document.getElementById('btnNextRound').style.display = 'none';
+
+  resetWheelPosition();
+  drawWheel(players);
+}
+
+// ── ALUR 1: SPIN NAMA ─────────────────────────────────────────
+function doSpinName() {
+  document.getElementById('btnSpinName').style.display = 'none';
+  
+  spinTheWheel(players, (winner) => {
+    selectedPlayer = winner;
+    document.getElementById('choiceArea').style.display = 'block';
+    document.getElementById('chosenNameHighlight').textContent = selectedPlayer;
+  });
+}
+
+// ── ALUR 2: PILIH TRUTH / DARE ────────────────────────────────
+function doChooseMode(mode) {
+  selectedMode = mode;
+  document.getElementById('choiceArea').style.display = 'none';
+  document.getElementById('btnSpinTask').style.display = 'block';
+  
+  const title = mode === 'truth' ? 'TRUTH 🧠' : 'DARE 🔥';
+  document.getElementById('playTitle').textContent = `Mengacak ${title} untuk ${selectedPlayer}`;
+  document.getElementById('wheelResultText').textContent = 'Tunggu Diputar...';
+  
+  resetWheelPosition();
+  const pool = mode === 'truth' ? customTruths : customDares;
+  drawWheel(pool);
+}
+
+// ── ALUR 3: SPIN TANTANGAN ────────────────────────────────────
+function doSpinTask() {
+  document.getElementById('btnSpinTask').style.display = 'none';
+  
+  const pool = selectedMode === 'truth' ? customTruths : customDares;
+  
+  spinTheWheel(pool, (task) => {
+    document.getElementById('btnNextRound').style.display = 'block';
+    
+    if (selectedMode === 'dare') launchMiniConfetti();
+
+    // Munculkan Pop-up setelah jeda 0.5 detik biar asik
+    setTimeout(() => {
+      showResultModal(task);
+    }, 500);
+  });
+}
+
+// ── POP-UP MODAL ──────────────────────────────────────────────
+function showResultModal(task) {
+  const modal = document.getElementById('resultModal');
+  const badge = document.getElementById('modalBadge');
+
+  document.getElementById('modalPlayerName').textContent = selectedPlayer;
+  document.getElementById('modalTaskText').textContent = task;
+
+  if (selectedMode === 'truth') {
+    badge.textContent = '🧠 TRUTH';
+    badge.className = 'td-modal-badge truth';
+  } else {
+    badge.textContent = '🔥 DARE';
+    badge.className = 'td-modal-badge dare';
+  }
+
+  modal.style.display = 'flex';
+}
+
+function closeResultModal() {
+  document.getElementById('resultModal').style.display = 'none';
+}
+
+// ── UTILITIES ─────────────────────────────────────────────────
 function escapeHtml(text) {
   const div = document.createElement('div');
   div.appendChild(document.createTextNode(text));
@@ -255,5 +275,20 @@ function showToast(msg, type = 'info') {
   setTimeout(() => toast.classList.remove('visible'), 3000);
 }
 
-// ── Auto-init ─────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', initTD);
+function launchMiniConfetti() {
+  const colors = ['#FF6B6B', '#FFD93D', '#FF9A3C', '#4D96FF', '#C77DFF'];
+  for (let i = 0; i < 40; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'confetti-dot';
+    dot.style.cssText = `
+      left: ${Math.random() * 100}vw;
+      background: ${colors[Math.floor(Math.random() * colors.length)]};
+      animation-delay: ${Math.random() * 0.3}s;
+      width: ${8 + Math.random() * 10}px;
+      height: ${8 + Math.random() * 10}px;
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+    `;
+    document.body.appendChild(dot);
+    setTimeout(() => dot.remove(), 2500);
+  }
+}

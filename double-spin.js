@@ -1,24 +1,20 @@
 // ============================================================
-// double-spin.js — LOGIKA DOUBLE SPIN
-// Dua roda berputar bersamaan, hasil otomatis dipasangkan
+// double-spin.js — LOGIKA DOUBLE SPIN DENGAN AUTO-REMOVE & INSTANT EXECUTION
 // ============================================================
 
-// ── State ─────────────────────────────────────────────────────
 const DS = {
   left:  { items: [], angle: 0, isSpinning: false, canvas: null, ctx: null },
   right: { items: [], angle: 0, isSpinning: false, canvas: null, ctx: null },
 };
 
-let dsResults = [];           // riwayat pasangan hasil spin
-let dsIsSpinning = false;     // lock global
+let dsResults = [];           
+let dsIsSpinning = false;     
 
-// Warna segmen (sama dengan spin.js)
 const DS_COLORS = [
   '#FF6B6B', '#FFD93D', '#6BCB77', '#4D96FF',
   '#FF9A3C', '#C77DFF', '#00C9A7', '#F72585'
 ];
 
-// Preset data
 const DS_PRESETS = {
   anggota: ['Andi', 'Budi', 'Citra', 'Dian', 'Eko', 'Fita'],
   tugas:   ['Presentasi', 'Dokumentasi', 'Coding', 'Testing', 'Desain', 'Review'],
@@ -31,7 +27,6 @@ function initDoubleSpinPage() {
   DS.right.canvas = document.getElementById('rightCanvas');
   DS.right.ctx    = DS.right.canvas.getContext('2d');
 
-  // Load saved data
   const savedLeft  = localStorage.getItem('ds_left_items');
   const savedRight = localStorage.getItem('ds_right_items');
   if (savedLeft)  { try { DS.left.items  = JSON.parse(savedLeft);  } catch(_){} }
@@ -101,7 +96,6 @@ function drawDsWheel(side, highlightIndex = -1) {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    // Teks
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(startAngle + arc / 2);
@@ -117,7 +111,6 @@ function drawDsWheel(side, highlightIndex = -1) {
     ctx.restore();
   });
 
-  // Lingkaran tengah
   ctx.beginPath();
   ctx.arc(cx, cy, 18, 0, Math.PI * 2);
   ctx.fillStyle = '#0f0f1a';
@@ -136,8 +129,39 @@ function drawDsWheel(side, highlightIndex = -1) {
 // ── DOUBLE SPIN ───────────────────────────────────────────────
 async function doubleSpin() {
   if (dsIsSpinning) return;
-  if (DS.left.items.length < 2 || DS.right.items.length < 2) {
-    showToast('Tambahkan minimal 2 item di tiap roda!', 'error');
+  if (DS.left.items.length < 1 || DS.right.items.length < 1) {
+    showToast('Pastikan ada item di kedua roda!', 'error');
+    return;
+  }
+
+  // 🔥 FITUR BARU: EKSEKUSI INSTAN JIKA SISA 1 VS 1
+  if (DS.left.items.length === 1 && DS.right.items.length === 1) {
+    const leftText = DS.left.items[0];
+    const rightText = DS.right.items[0];
+
+    // Langsung hapus
+    DS.left.items = [];
+    DS.right.items = [];
+
+    // Simpan & Render ulang
+    saveDsItems('left');
+    saveDsItems('right');
+    renderDsItems('left');
+    renderDsItems('right');
+
+    DS.left.angle = 0;
+    DS.right.angle = 0;
+    drawDsWheel('left');
+    drawDsWheel('right');
+
+    // Catat ke riwayat
+    dsResults.unshift({ left: leftText, right: rightText });
+    renderDsResults();
+
+    // Langsung munculkan Pop-up & Confetti
+    launchDsConfetti();
+    showDsResultModal(leftText, rightText);
+    showToast('Sisa 1 pasang terakhir otomatis dieksekusi! ⚡', 'success');
     return;
   }
 
@@ -145,17 +169,12 @@ async function doubleSpin() {
   document.getElementById('doubleSpinBtn').disabled = true;
   document.getElementById('doubleSpinBtn').textContent = '⚡ Berputar…';
 
-  // ── Spin SFX ──────────────────────────────────────────────
   if (window.AudioController) AudioController.playSpinSound();
 
-  // Aktifkan connector line
   document.getElementById('connectorLine').classList.add('active');
-
-  // Glowing canvas
   DS.left.canvas.classList.add('spinning-glow');
   DS.right.canvas.classList.add('spinning-glow');
 
-  // Rotasi total masing-masing roda (sedikit berbeda agar terlihat realistis)
   const totalLeft  = Math.PI * 2 * (5 + Math.random() * 5);
   const totalRight = Math.PI * 2 * (5 + Math.random() * 5);
   const duration   = 4000 + Math.random() * 800;
@@ -190,18 +209,32 @@ async function doubleSpin() {
 }
 
 function finishDoubleSpin() {
-  // Hitung pemenang kiri
   const leftWinner = calcWinner('left');
   const rightWinner = calcWinner('right');
 
-  drawDsWheel('left', leftWinner.index);
-  drawDsWheel('right', rightWinner.index);
+  const leftText = leftWinner.text;
+  const rightText = rightWinner.text;
 
-  // Tambah ke hasil
-  dsResults.unshift({ left: leftWinner.text, right: rightWinner.text });
+  // Hapus dari array
+  DS.left.items.splice(leftWinner.index, 1);
+  DS.right.items.splice(rightWinner.index, 1);
+
+  // Simpan & Render
+  saveDsItems('left');
+  saveDsItems('right');
+  renderDsItems('left');
+  renderDsItems('right');
+
+  DS.left.angle = 0;
+  DS.right.angle = 0;
+  drawDsWheel('left');
+  drawDsWheel('right');
+
+  // Catat riwayat
+  dsResults.unshift({ left: leftText, right: rightText });
   renderDsResults();
 
-  // Reset spin state
+  // Reset UI
   dsIsSpinning = false;
   document.getElementById('doubleSpinBtn').disabled = false;
   document.getElementById('doubleSpinBtn').textContent = '⚡ DOUBLE SPIN!';
@@ -209,12 +242,10 @@ function finishDoubleSpin() {
   DS.left.canvas.classList.remove('spinning-glow');
   DS.right.canvas.classList.remove('spinning-glow');
 
-  // ── Stop Spin SFX ──────────────────────────────────────────────
   if (window.AudioController) AudioController.stopSpinSound();
 
-  // Confetti
   launchDsConfetti();
-  showToast(`${leftWinner.text} → ${rightWinner.text} ✨`, 'success');
+  showDsResultModal(leftText, rightText);
 }
 
 function calcWinner(side) {
@@ -226,7 +257,19 @@ function calcWinner(side) {
   return { index, text: items[index] };
 }
 
-// ── Render hasil ──────────────────────────────────────────────
+// ── MODAL POP-UP ──────────────────────────────────────────────
+function showDsResultModal(leftText, rightText) {
+  const modal = document.getElementById('dsResultModal');
+  document.getElementById('modalLeftItem').textContent = leftText;
+  document.getElementById('modalRightItem').textContent = rightText;
+  modal.style.display = 'flex';
+}
+
+function closeDsResultModal() {
+  document.getElementById('dsResultModal').style.display = 'none';
+}
+
+// ── Render hasil (Tabel Bawah) ────────────────────────────────
 function renderDsResults() {
   const area = document.getElementById('dsResultsArea');
   const list = document.getElementById('dsResultsList');
